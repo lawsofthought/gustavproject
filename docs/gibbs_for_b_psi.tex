@@ -1,0 +1,82 @@
+\section{Sampling $\psi$ and $\mathit{b}$}
+\newcommand{\phiseq}{\phi_1, \phi_2 \ldots}
+
+The posterior distribution over $\psi$ is
+\[
+\Prob{\psi\given w_{1:J},x_{1:J}} \propto \Prob{w_{1:J}\given x_{1:J},\psi,b}\Prob{\psi\given c},
+\]
+while the posterior over the concentration paramter $b$ is
+\[
+\Prob{b\given w_{1:J},x_{1:J}} \propto \Prob{w_{1:J}\given x_{1:J},\psi,b}\Prob{b}.
+\]
+In both cases, the likelihood term is 
+\begin{align*}
+	\Prob{w_{1:J}\given x_{1:J},\psi,b}  
+	&=
+	\int
+	\prod_{j=1}^J \prod_{i=1}^{n_j}
+	\Prob{w_{ji} \given x_{ji}, \phiseq}
+	\Prob{\phiseq \given \psi, b}
+	d\phi_1 d\phi_2 \ldots,\\
+	&=
+	\int
+	\prod_{j=1}^J \prod_{i=1}^{n_j}
+	\Prob{w_{ji} \given \phi_{x_{ji}}}
+		\prod_{k=1}^\infty \Prob{\phi_k \given \psi, b}
+	d\phi_1 d\phi_2 \ldots,\\
+	&=
+	    \underbrace{
+	    \prod_{k=K+1}^\infty \int\Prob{\phi_k \given \psi, b}d\phi_k
+	    }_{=1}
+	\int
+		\prod_{j=1}^J \prod_{i=1}^{n_j} \Prob{w_{ji}\given \phi_{x_{ji}}}
+		\prod_{k}^K \Prob{\phi_k \given \psi, b}
+	d\phi_1 d\phi_2 \ldots,\\
+	&=
+	\frac{\Gamma(b)}{\prod_{v=1}^V\Gamma(b\psi_v)}
+	\prod_{k=1}^K
+	\int
+	\prod_{v=1}^V
+	\phi_{kv}^{S_{kv} - b\psi_v-1}d\phi_k,\\
+	& = \prod_{k=1}^{K} \frac{\Gamma(b)}{\Gamma(S_{k\cdot}+b)} \prod_{v=1}^V \frac{\Gamma(S_{kv}+b\psi_v)}{\Gamma(b\psi_v)},
+\end{align*}
+and, as was the case for $\Prob{x_{1:J} \given a, m}$, this likelihood can be rewritten as 
+\[
+\Prob{w_{1:J}\given x_{1:J},\psi,b} 
+= \prod_{k=1}^{K}
+\frac{1}{\Gamma(S_{k\cdot})}\int_0^1\!{(\stirt{s}{k})}^{b-1} (1-\stirt{s}{k})^{S_{k\cdot}-1} d\stirt{s}{k}\ 
+\prod_{v=1}^{V}\sum_{\stirs{s}{kv}=0}^{S_{kv}}\mathbb{S}(S_{kv},\stirs{s}{kv})(b\psi_v)^{\stirs{s}{kv}}.
+\]
+and by
+treating $\stirS{s}$ and $\stirT{s}$ as auxillary variables, we obtain the augmented likelihood 
+\[
+	\begin{split}
+		\Prob{w_{1:J}&\given x_{1:J},\stirS{s},\stirT{s},\psi,b} \\
+		&= \prod_{k=1}^{K}\frac{1}{\Gamma(S_{k\cdot})} {(\stirt{s}{k})}^{b-1} (1-\stirt{s}{k})^{S_{k\cdot}-1} \prod_{v=1}^{V}\mathbb{S}(S_{kv},\stirs{s}{kv})(b\psi_v)^{\stirs{s}{kv}}.
+	\end{split}
+\]
+
+As the prior for $\psi$ is a symmetric Dirichlet with concentration parameter $c$,
+its posterior is the Dirichlet distribution
+\[
+	\Prob{\psi \given \stirS{s}, c, V}
+= \propto \prod_{v=1}^V {\psi_v}^{\sum_k\stirs{s}{kv} + c/V-1}.
+\]
+On the other hand, just like with the case of $\stirs{r}{jk}$, the posterior for each $\stirs{s}{kv}$ is 
+\[
+	\Prob{\stirs{s}{kv} \given w, x, \psi, b} = 
+\frac{\mathbb{S}(S_{kv},\stirs{s}{kv})b\psi_{v}^{\stirs{s}{kv}}} { \sum_{\stirs{s}{kv\prime}=0}^{S_{kv}}\mathbb{S}(S_{kv},\stirs{s}{kv\prime})b\psi_{v}^{\stirs{s}{kv\prime}}}
+\]
+For the case of $b$, its prior is a Gamma distribution with shape and scale
+parameters equal to 1.  The augmented likelihood treated as a function of $b$ is
+\[P(w_{1:j} \given x_{1:j}, b) \propto  \prod_{k}\tau_{k}^{b} \prod_{v} b^{\stirs{s}{kv}} = e^{b\sum_{k}\log\stirt{s}{k}} b^{\sum_{kv}\stirs{s}{kv}},\]
+and so the posterior is a Gamma distribution with shape and scale
+\[
+	\sum_{kv}\stirs{s}{kv} + 1,\quad \frac{1}{1-\sum_{k}\log\stirt{s}{k}},
+\]
+respectively.
+Finally, with a uniform prior on each $\stirt{s}{k}$, and given that the augmented treated as a function of $\stirt{s}{k}$ is
+\[
+	\Prob{w_{1:J} \given x_{1:J}, b, \stirt{r}{j}} = {(\stirt{s}{k})}^{b-1} (1-\stirt{s}{k})^{S_{k\cdot}-1} 
+\]
+the posterior for each $\stirt{s}{k}$ is $\textrm{Beta}(b,S_{k\cdot})$.

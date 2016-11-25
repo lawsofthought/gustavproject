@@ -1,0 +1,150 @@
+\section{Sampling $m$ and $a$}
+
+The posterior distribution over the infinite length array $m$ is
+\[
+	\Prob{m \given x_{1:J}, a, \gamma} \propto \Prob{x_{1:J} \given a, m} \Prob{m \given \gamma},
+\]
+while the posterior over the scalar parameter $a$ is
+\[
+	\Prob{a \given x_{1:J}} \propto \Prob{x_{1:J} \given a, m} \Prob{a},
+\]
+with the priors as stated above.
+The likelihood term in both cases is
+\[
+	\Prob{x_{1:J} \given a, m} 
+	= \prod_{j=1}^J \int \prod_{i=1}^{n_j} \Prob{x_{ji} \given \pi_j} \Prob{\pi_j \given a, m}
+	d\pi_j,
+\]
+where $\prod_{i=1}^{n_j}\Prob{x_{ji} \given \pi_j} = \prod_{k=1}^K \pi_{jk}^{R_{jk}}$, with $R_{jk} = \sum_{i=1}^{n_j} \mathbb{I}(x_{ji} = k)$ and  $K$ is, as stated above, the maximum value attained by any latent variable.
+The prior $\Prob{\pi_j \given a, m}$ is a Dirichlet process prior and so, by definition of the Dirichlet process,
+\[
+	\Prob{\pi_{j1}, \pi_{j2} \ldots \pi_{jK}, \pi_{j\unrep} \given a, m}
+	= 
+	\frac{\Gamma(a)}{\Gamma(am_{\unrep})\prod_{k=1}^{K}\Gamma(am_k)}
+	\pi_{j\unrep}^{am_{\unrep}-1} \prod_{k=1}^K \pi_{jk}^{am_k-1},
+\]
+where $m_{\unrep} = \sum_{\{k > K\}} m_{jk}$, as stated above, and $\pi_{\unrep} = \sum_{\{k > K\}} \pi_{jk}$. Therefore,
+\begin{align*}
+	\Prob{x_{1:J} \given a, m} 
+	&= \prod_{j=1}^J \int \prod_{i=1}^{n_j} \Prob{x_{ji} \given \pi_j} \Prob{\pi_j \given a, m}
+	d\pi_j,\\
+	&= 
+	\prod_{j=1}^J 
+	\frac{\Gamma(a)}{\Gamma(am_{\unrep})\prod_{k=1}^{K}\Gamma(am_k)}
+	\pi_{j\unrep}^{am_{\unrep}-1} 	
+	\int 
+	\prod_{k=1}^K \pi_{jk}^{R_{jk} + m_k-1}
+	d\pi_j,\\
+	&=
+	\prod_{j=1}^J 
+	\frac{\Gamma(a)}{\Gamma(am_{\unrep})\prod_{k=1}^{K}\Gamma(am_k)}
+	\frac{\Gamma(am_{\unrep})\prod_{k=1}^{K}\Gamma(R_{jk}+am_k)}{\Gamma(R_{j\cdot} + a)},\\
+	&=
+	\prod_{j=1}^J 
+	\frac{\Gamma(a)}
+	{\Gamma(R_{j\cdot} + a)}
+	\prod_{k=1}^{K}\frac{\Gamma(R_{jk}+am_k)}{\Gamma(am_k)},
+	\intertext{and this can be re-written as}
+	&=
+\prod_{j=1}^{J}
+\frac{1}{\Gamma(R_{j\cdot})}\int_0^1\!{(\stirt{r}{j})}^{a-1} (1-\stirt{r}{j})^{R_{j\cdot}-1} d\stirt{r}{j}\ 
+\prod_{k=1}^{K}\sum_{\stirs{r}{jk}=0}^{R_{jk}}\mathbb{S}(R_{jk},\stirs{r}{jk})(am_k)^{\stirs{r}{jk}},\\
+\end{align*}
+given that
+\[
+\int_0^1\!{(\stirt{r}{j})}^{a-1} (1-\stirt{r}{j})^{R_{j\cdot}-1} d\stirt{r}{j}
+\doteq
+\frac{\Gamma(a)\Gamma(R_{j\cdot})}{\Gamma(R_{j\cdot} + a)},
+\]
+and
+\[
+\sum_{\stirs{r}{jk}=0}^{R_{jk}}\mathbb{S}(R_{jk},\stirs{r}{jk})(am_k)^{\stirs{r}{jk}}
+\doteq
+\frac{\Gamma(R_{jk}+am_k)}{\Gamma(am_k)},
+\]
+where $\mathbb{S}$ is an unsigned Stirling number of the first kind.
+By treating $\stirT{r}$ and $\stirS{r}$ as unobserved auxillary variable, this leads to the augmented likelihood term
+\[
+	\Prob{x_{1:J} \given a, m, \stirT{r}, \stirS{r}}
+	=
+	\prod_{j=1}^{J}
+	\frac{1}{\Gamma(R_{j\cdot})}
+	{(\stirt{r}{j})}^{a-1} (1-\stirt{r}{j})^{R_{j\cdot}-1}
+	\prod_{k=1}^{K}
+	\mathbb{S}(R_{jk},\stirs{r}{jk})(am_k)^{\stirs{r}{jk}}.
+\]
+With the augmented likelihood treated as a function of $\stirs{r}{jk}$, we have
+\[
+	\Prob{x_{1:J} \given a, m, \stirS{r}}
+	\propto
+	\mathbb{S}(R_{jk},\stirs{r}{jk})(am_k)^{\stirs{r}{jk}}.
+\]
+and with a uniform prior over the values of $\stirs{r}{jk}$, the posterior
+probability of $\stirs{r}{jk}$ given all other variables is therefore
+\[
+	\Prob{\stirs{r}{jk} \given x_{1:J}, a, m}
+	= \frac{\mathbb{S}(R_{jk},\stirs{r}{jk})(am_k)^{\stirs{r}{jk}}}{
+		\sum_{\stirs{r}{jk}=0}^{R_{jk}}\mathbb{S}(R_{jk},\stirs{r}{jk})(am_k)^{\stirs{r}{jk}}
+		}.
+\]
+On the other hand, when the augmented likelihood is treated as a function of $\stirt{r}{j}$, we have
+\[
+	\Prob{x_{1:J} \given a, \stirt{r}{j}}
+	\propto
+	{(\stirt{r}{j})}^{a-1} (1-\stirt{r}{j})^{R_{j\cdot}-1},
+\]
+and so, with a uniform prior on $\stirt{r}{j}$, the posterior is
+	\[
+	\Prob{\stirt{r}{j} \given x_{1:J}, a}
+	\propto
+	{(\stirt{r}{j})}^{a-1} (1-\stirt{r}{j})^{R_{j\cdot}-1}
+	= \mathrm{Beta}(a, R_{j\cdot}).
+	\]
+Similarly, with the augmented likelihood treated as function of $m$, we have
+\[
+	\Prob{x_{1:J} \given m, \stirS{r}}
+	\propto
+	\prod_{k=1}^K m_k^{\sum_{j=1}^J \stirs{r}{jk}}
+	= \prod_{k=1}^K m_k^{\stirs{r}{\cdot k}}.
+\]
+The prior on $m$ is a stick-breaking prior, and so the probability distribution
+over $m_1\ldots m_k \ldots m_K, m_{\unrep}$ is $m_1 \sim \omega^{0}_1$, and then
+$m_k \sim \omega^{0}_k (1-\sum_{k\prime=1}^{k-1}m_{k\prime})$ for $k \in 2 \ldots
+K$, and finally $m_{\unrep} = 1-\sum_{k=1}^K m_k$, where $\omega^{0}_1 \ldots
+\omega^{0}_K$ are independently and identically distributed as
+$\mathrm{Beta}(1,\gamma)$. This finite stick-breaking distribution is a $K+1$
+dimensional Generalized Dirichlet distribution, see
+\citeA{connor1969,wong1998}, whose parameter vectors are a vector of $K$ $1$'s
+and a vector of $K$ $\gamma$'s.  As described in \citeA{wong1998}, the
+Generalized Dirichlet distribution is a conjugate prior for a multinomial
+likelihood. As such, the posterior over $m_1, m_2 \ldots m_K, m_{\unrep}$ is a
+Generalized Dirichlet distribution with length $K$ parameter vectors $\alpha_1,
+\alpha_2 \ldots \alpha_K$ and $\beta_1, \beta_2 \ldots \beta_K$, where
+\[\alpha_k = 1 + \stirs{r}{\cdot k}, 
+  \quad\beta_k = \gamma + \sum_{k\prime = k +1}^K \stirs{r}{\cdot k\prime},
+  \quad\text{for $k \in 1, 2 \ldots K$}.\]
+We can sample from this Generalized Dirichlet
+distribution by using a finite stick-breaking construction, as was used for the
+prior, i.e. for $m_1 \sim \omega_1$, 
+$m_k \sim \omega_k (1-\sum_{k\prime=1}^{k-1}m_{k\prime})$
+for $k \in 1\ldots K$, and $m_{\unrep} = 1-\sum_{k=1}^K m_k$,
+where $\omega_k \sim \mathrm{Beta}(\alpha_k, \beta_k)$.
+Finally, when treated as a function of $a$, the augmented likelihood is
+\[
+	\Prob{x_{1:J} \given m, \stirS{r}}
+	= \prod_{j=1}^J (\stirt{r}{j})^a \prod_{k=1}^K a^{\stirs{r}{jk}}
+	= e^{a \sum_{j=1}^J \log \stirt{r}{j}} a^{\sum_{jk}\stirs{r}{jk}}.
+\]
+As stated above, the prior on $a$ is a Gamma distribution\marginnote{Here, we
+assume the following parameterization of the Gamma distribution:
+\[\Prob{x\given a,s} = \frac{1}{s^a\Gamma(a)} x^{a-1} e^{-\frac{x}{s}},\]
+where $a$ and $s$ are the shape and scale parameters, respectively.} whose
+shape and scale parameters are both equal to 1.0. Therefore, the posterior is a Gamma distribution with shape and scale
+\[
+	\sum_{jk}\stirs{r}{jk} + 1,
+	\quad
+	\frac{1}{1 - \sum_{j=1}^J \log \stirt{r}{j}},
+\]
+respectively.
+
+

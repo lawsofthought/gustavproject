@@ -1,0 +1,20 @@
+\section{Sampling $\gamma$}
+
+The posterior distribution distribution for the stick-breaking parameter $\gamma$ is
+\[
+	\Prob{\gamma \given m} \propto	\Prob{m \given \gamma} \Prob{\gamma}.
+\]
+As $m_1, m_2 \ldots m_K, m_{\unrep}$ is a deterministic function of $\omega_1,
+\omega_2 \ldots \omega_K$, 
+the likelihood of $m$ given $\gamma$ is equivalent to the likelihood of
+$\omega$ given $\gamma$, which is a product of Beta distributions
+\begin{align*}
+\Prob{\omega\given\gamma} 
+	&= \prod_{k=1}^{K} \textrm{Beta}(\omega_k \given 1,\gamma)\\
+	&\propto {\frac{\Gamma(1+\gamma)}{\Gamma(\gamma)}}^{K} \prod_{k=1}^{K} (1-\omega_k)^{\gamma-1} 
+	\mathnote{For any $a$, $\tfrac{\Gamma(1+a)}{\Gamma(a)}=a.$},\\
+	&= \gamma^{K} e^{\gamma\sum_{k}\log(1-\omega_k)},
+\end{align*}
+With a Gamma prior on $\gamma$, whose shape and scale equal 1, the posterior is
+also a Gamma distribution with shape and scale \[K+1,\quad
+\frac{1}{1-\sum_{k}\log(1-\omega_k)}.\] respectively.

@@ -1,0 +1,20 @@
+\lettrine[lines=3,findent=1pt]%
+{T}{he} \emph{hierarchical Dirichlet process mixture model} (\hdpmm), when its
+mixture components are categorical distributions, is a probabilistic model of
+multinomial data. It was first described as part of a more general description
+of Hierarchical Dirichlet Process (\hdp) models by \citeA{TehJorBea2004b,teh:JASA},
+and is the Bayesian nonparametric generalization of the Latent Dirichlet
+Allocation (\lda) model of \citeA{blei03}.  
+
+The aim of this note is to describe in detail a Gibbs sampler for the
+\hdpmm when used with multinomial data. This Gibbs sampler is based on of what
+was described in \citeA{TehJorBea2004b,teh:JASA} for general \hdp models. However,
+as they did not deal in detail with \hdp mixture models for multinomial data,
+important details of the sampler required for this particular case were not
+described.  On the other hand, \citeA{newman2009distributed} do deal explicitly
+with the case of the \hdpmm for multinomial data, and the Gibbs sampler that we
+desribe here is almost identical to their's. However, for some
+hyper-parameters, \citeA{newman2009distributed} either make simplifying
+assumptions or assume that their values are known, which are assumptions that
+we do not make here. As such, the sampler we describe here is an extension,
+though minor, of that described in \citeA{newman2009distributed}.

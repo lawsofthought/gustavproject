@@ -1,0 +1,51 @@
+\section{Sampling $\mathit{c}$}
+
+Rather than inferring $c$, the hyperprior of $\psi$, directly from the
+samplied value of $\psi$, we can infer $c$ on the basis of the remaining observed variables,
+integrating over $\phi$ and $\psi$. The probability of the observed variables,
+integrating over $\phi$ and $\psi$, is
+\[
+	\Prob{w_{1:J} \given x_{1:J}, b, c}
+	=
+	\int	
+	\underbrace{\int \Prob{w_{1:J}\given x_{1:J}, \phi}\Prob{\phi\given b, \psi} d\phi}_{\Prob{w_{1:J}\given x_{1:J},\psi,b}}
+	\Prob{\psi \given c}  d\psi.
+\]
+Using the augmented version of $\Prob{w_{1:J}\given x_{1:J},\psi,b}$ from the
+previous section, i.e., $\Prob{w_{1:J}\given
+x_{1:J},\stirS{s},\stirT{s},\psi,b}$, and treating this augmented liklihood as a function of
+$\psi$, we then have
+\begin{align*}
+	\int
+	\Prob{w_{1:J}\given \stirS{s},\psi}\Prob{\psi \given c}
+	d\psi
+	&\propto
+	\int
+	\prod_{v=1}^V \psi_{v}^{\sum_{k=1}^K \stirs{s}{kv}} 
+	\prod_{v=1}^V \psi_{v}^{c/V -1}
+	d\psi,\\
+	&=
+	\frac{\Gamma(c)}{\Gamma(c+\stirs{s}{\cdot\cdot})}\prod_{v=1}^V\frac{\Gamma(\stirs{s}{\cdot v} + c/V)}{\Gamma(c/V)},
+\end{align*}
+which is the likelihood function for $c$. As before, we can re-write this likelihood as 
+\[
+	\frac{1}{\Gamma(\stirs{s}{\cdot\cdot})} \int (\stirt{q}{})^{c-1} (1-\stirt{q}{})^{\stirs{s}{\cdot\cdot}-1} d\stirt{q}{}
+	\prod_{v=1}^V
+	\sum_{\stirs{q}{v}=0}^{\stirs{s}{\cdot v}}
+	\mathbb{S}(\stirs{s}{\cdot v},\stirs{q}{v})(\tfrac{c}{V})^{\stirs{q}{v}}
+\]
+and treating $\stirT{q}$ and $\stirS{q}$ as auxiliary variables, we have the augmented likelihood
+\[
+	\frac{1}{\Gamma(\stirs{s}{\cdot\cdot})} (\stirt{q}{})^{c-1} (1-\stirt{q}{})^{\stirs{s}{\cdot\cdot}-1}
+	\prod_{v=1}^V
+	\mathbb{S}(\stirs{s}{\cdot v},\stirs{q}{v})(\tfrac{c}{V})^{\stirs{q}{v}}.
+\]
+Following the same procedure here as we used for the case of $a$ and $m$, and $b$ and $\psi$, the posterior for each $\stirs{q}{v}$ is
+\[
+\frac{ \mathbb{S}(\stirs{s}{\cdot v},\stirs{q}{v})\frac{c}{V}^{\stirs{q}{v}} } { \sum_{\stirs{q}{v\prime}=0}^{\stirs{s}{\cdot v}}\mathbb{S}(\stirs{s}{\cdot v},\stirs{q}{v\prime})\frac{c}{V}^{\stirs{q}{v\prime}} } .
+\]
+The posterior for $c$ is the Gamma distribution with shape and scale 
+\[
+\sum_{v=1}^V\stirs{q}{v} + 1,\quad \frac{1}{1 - log\stirt{q}{}},
+\]
+respectively, and the posterior for $\stirt{q}{}$ is $\textrm{Beta}(c,\stirs{s}{\cdot\cdot})$.

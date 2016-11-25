@@ -1,0 +1,53 @@
+\section{The probabilistic model}
+
+One of the most straightforward applications of the multinomial data \hdpmm is
+as a \emph{bag-of-words} probabilistic language model, and in what follows
+we'll describe it with this application in mind. However, modulo some possible
+changes in notation, this will in fact constitute a general description of the
+\hdpmm for multinomial data.
+
+In general, according to a bag-of-words language model, a corpus of natural
+language is a set of $J$ documents or texts \[w_1, w_2 \ldots w_j \ldots w_J,\]
+where text $j$, i.e., $w_j$, is a set of $n_j$ words from a finite vocabulary
+of $V$ word types. For simplicity, this vocabularly can be represented as the
+$V$ integers $\{1, 2 \ldots V\}$.  From this, we have each $w_j$ defined as
+\[w_j = w_{j1}, w_{j2} \ldots w_{ji} \ldots w_{jn_j},\] with each $w_{ji} \in
+\{1 \ldots V\}$.  The \emph{bag-of-words} assumption is that, for each text,
+$w_{j1}, w_{j2} \ldots w_{ji} \ldots w_{jn_j}$ are exchangeable random
+variables, i.e.  their joint probability distribution is invariant to any
+permutation of the indices.  By this assumption therefore, as the name implies,
+each text is modelled as an unordered set, or \emph{bag}, of words.
+
+As a generative model of this language corpus, the \textsc{hdpmm} treats each
+observed word $w_{ji}$ as a sample from one of an underlying set of text or
+discourse topics: \[ \phi = \phi_1, \phi_2 \ldots \phi_k \ldots, \] where each
+$\phi_k$ is a probability distribution over $\{1 \ldots V\}$.  The identity of
+the particular topic distribution from which $w_{ji}$ is drawn is determined by
+the value of a discrete latent variable $x_{ji} \in \{1, 2 \ldots k \ldots\}$
+that corresponds to $w_{ji}$. As such, for each $w_{ji}$, we model it as
+\[w_{ji}\vert x_{ji}, \phi \sim \dcat{\phi_{x_{ji}}}.\] 
+
+To be clear, the \hdpmm assumes that there are an unlimited number of topic
+distributions from which the observed data are drawn, and so each $x_{ji}$ can
+take on infinitely many discrete values.  The probability distribution over the
+infinitely possible values of each $x_{ji}$ is given by an infinite length
+categorical distribution $\pi_j$, i.e., $\pi_j = \pi_{j1}, \pi_{j2} \ldots
+\pi_{jk} \ldots$, where $0 \leq \pi_{jk} \leq 1$ and $\sum_{k=1}^\infty
+\pi_{jk} = 1$, that is specific to text $j$.  In other words, \[x_{ji} \given
+\pi_j \sim \dcat{\pi_j}.\] Each $\pi_j$ is assumed to be drawn from a Dirichlet
+process prior whose base distribution, $m$, is a categorical distribution over
+the positive integers and whose scalar concentration parameter is $a$: 
+\[\pi_j\vert a,m \sim \ddp{a,m}.\]
+The $m$ base distribution is assumed to be drawn from a stick breaking
+distribution with a parameter $\gamma$: \[ m\vert\gamma \sim \dstick{\gamma}.
+\]
+
+The prior distributions of the Dirichlet process concentration parameter $a$
+and the stick-breaking parameter $\gamma$ are Gamma distributions, both with
+shape and scale parameters equal to 1. For the topic distributions, $\phi_1,
+\phi_2 \ldots \phi_k \ldots$, we can assume they are independently and
+identically drawn from a Dirichlet distribution with a length $V$ location
+parameter $\psi$ and concentration parameter $b$. In turn, $\psi$ is drawn from
+a symmetric Dirichlet distribution with concentration parameter $c$. Finally,
+both $b$ and $c$, like $a$ and $\gamma$, can be given Gamma priors, again with
+shape and scale distributions equal to 1.

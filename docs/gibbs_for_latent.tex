@@ -1,0 +1,113 @@
+\section{Sampling each latent variable $x_{ji}$}
+
+The posterior probability that $x_{ji}$ takes the value $k$, for any $k \in 1, 2 \ldots $, is
+\[
+	\begin{split}
+		\Prob{x_{ji} = k \given w_{ji} &= v, x_{\neg ji}, w_{\neg ji}, b, \psi, a,m},\\
+		&\propto
+	\Prob{w_{ji} =v \given x_{ji}=k, w_{\neg ji}, x_{\neg ji}, b, \psi}
+	\Prob{x_{ji} =k \given x_{\neg ji}, a,m},
+	\end{split}
+\]
+where $x_{\neg ji}$ denotes all latent variables excluding $x_{ji}$, with an analogous
+meaning for $w_{\neg ji}$. 
+Here, the likelihood term is
+\begin{align*}
+\Prob{w_{ji}=v \given x_{ji}=k, x_{\neg ji}, w_{\neg ji},b, \psi} 
+	&= \int \Prob{w_{ji}=v \given \phisub{\phi}{k}} 
+	\Prob{\phisub{\phi}{k} \given x_{\neg ji}, w_{\neg ji},b, \psi} d\phisub{\phi}{k}.
+\end{align*}
+This is the expected value of $\phi_{kv}$ according the Dirichlet posterior
+\[
+\Prob{\phi_k \given x_{\neg ji} , w_{\neg ji}, b, \psi} 
+= \frac{\Gamma(\rji{S}{k\cdot}{ji}+b)}{\prod_{v=1}^V\Gamma(\rji{S}{kv}{ji}+b\psi_v)} 
+  \prod_{v=1}^V\phi_{kv}^{\rji{S}{kv}{ji} + b\psi_v - 1}\ ,
+\]
+where $\rji{S}{kv}{ji} \triangleq \sum_{j\prime i\prime \neq ji}
+\mathbb{I}(w_{j\prime i\prime}=v,x_{j\prime i\prime }=k)$ and $\rji{S}{k\cdot}{ji} =
+\sum_{v=1}^V \rji{S}{kv}{ji}$. 
+As such,
+\begin{align*}
+\Prob{w_{ji}=v \given x_{ji}=k, x_{\neg ji}, w_{\neg jli},b, \psi} 
+	= &\frac{\rji{S}{kv}{ji} + b\psi_{v}}{\rji{S}{k\cdot}{ji} + b}.
+\end{align*}
+The prior term, on the other hand, is
+\begin{align*}
+\Prob{x_{ji}=k \given x_{\neg ji},a,m} 
+	&= \int \Prob{x_{ji}=k \given \phisub{\pi}{j}} 
+	\Prob{\phisub{\pi}{j} \given x_{\neg ji}, a,m} d\phisub{\pi}{j},
+\end{align*}
+and this the expected value of $\pi_{jk}$ according to
+\[
+\Prob{\phisub{\pi}{j} \given x_{\neg ji}, a,m} \propto \Prob{x_{\neg ji} \given \pi_j}\Prob{\pi_j \given a, m}.
+\]
+As $\Prob{\pi_j \given a, m}$ is a Dirichlet
+process, by the definition of a Dirichlet process, we have
+\[
+	\Prob{\pi_{jk} \given a, m} = \mathrm{Beta}(am_k, a\textstyle\sum_{\{k\prime \neq k\}}m_{k\prime}),
+\]
+and therefore,
+\[
+	\Prob{\pi_{jk} \given x_{\neg ji}, a, m} 
+	= \mathrm{Beta}(\rji{R}{jk}{ji} + am_k , 
+			a\textstyle\sum_{\{k\prime \neq k\}}
+			\rji{R}{jk\prime}{ji}+m_{k\prime})
+\]
+where
+$\rji{R}{jk}{ji} \triangleq \sum_{i\prime \neq i}^{n_j}\mathbb{I}(x_{ji\prime }=k)$. 
+As such, the expected value of $\pi_{jk}$ is
+\[
+\Prob{x_{ji}=k \given x_{\neg ji},a,m} 
+	= \frac{\rji{R}{jk}{ji} + am_{k}}{\rji{R}{j\cdot}{ji} + a},
+\]
+where
+$\rji{R}{j\cdot}{ji} = \sum_{k=1}^\infty \rji{R}{jk}{ji}$.
+
+Given these likelihood and prior terms, the posterior is simply
+\begin{align*}
+	\Prob{x_{ji} = k \given w_{ji} = v, x_{\neg ji}, w_{\neg ji}, b, \psi, a,m}
+	&\propto\frac{\rji{S}{kv}{ji} + b \psi_{v}}{\rji{S}{k\cdot}{ji} + b} \frac{\rji{R}{jk}{ji} + am_{k}}{\rji{R}{j\cdot}{ji} + a},\\
+	&\propto\frac{\rji{S}{kv}{ji} + b \psi_{v}}{\rji{S}{k\cdot}{ji} + b} \times \left(\rji{R}{jk}{ji} + am_{k}\right).
+\end{align*}
+Note that from this, we also have
+\begin{align*}
+	\Prob{x_{ji} > K \given x_{\neg ji}, w, b, \psi, a,m}
+	&\propto
+	\sum_{\{k > K\}} 
+	\frac{\rji{S}{kv}{ji} + b \psi_{v}}{\rji{S}{k\cdot}{ji} + b} \times \left(\rji{R}{jk}{ji} + am_{k}\right).
+\end{align*}
+Given that for all $k > K$, where $K$ is the maximum value of the set 
+	$\{x_{ji} \colon j \in 1\ldots J, i\in 1 \ldots n_j\}$, we have $\rji{R}{jk}{ji} = 0$ and $\rji{S}{kv}{ji} = 0$, then
+\begin{align*}
+	\Prob{x_{ji} > K \given x_{\neg ji}, w, b, \psi, a, m}
+	&\propto
+	\sum_{\{k > K\}} 
+	\frac{b \psi_{v}}{b} \times am_{k},\\
+	&=
+	\psi_v \times a m_{\unrep} 
+\end{align*}
+where $m_{\unrep} = \sum_{\{k > K\}} m_{jk}$.
+
+
+As a practical matter of sampling, for each latent variable $x_{ji}$, we calculate 
+\begin{align*}
+	f_{jik} &= \propto\frac{\rji{S}{kv}{ji} + b \psi_{v}}{\rji{S}{k\cdot}{ji} + b} \times \left(\rji{R}{jk}{ji} + am_{k}\right),\\
+\intertext{for $k \in 1, 2 \ldots K$, and then}
+	f_{ji\unrep} &= \psi_{v} \times a m_{\unrep}
+\end{align*}
+where $K$, $m_{\unrep}$ are defined as above and $v = w_{ji}$.  Now,
+\[
+	\Prob{x_{ji} \leq K \given x_{\neg ji}, w, b, \psi, a, m} = \frac{\sum_{k=1}^K f_{jik}}{\sum_{k=1}^K f_{jik} + f_{ji\unrep}}
+\]
+and
+\[
+	\Prob{x_{ji}  > K \given x_{\neg ji}, w, b, \psi, a, m} = \frac{ f_{ji\unrep}}{\sum_{k=1}^K f_{jik} + f_{ji\unrep}},
+\]
+and so a single random sample will be sufficient to decide if $x_{ji} \leq K$ or $x_{ji} > K$. If $x_{ji} \leq K$, then
+\[
+	\Prob{x_{ji} = k \given x_{\neg ji}, w, b, \psi, a, m, x_{ji} \leq K} = \frac{f_{jik}}{\sum_{k=1}^K f_{jik}}. 
+	\]
+On the other hand, if $x_{ji} > K$, the probability that $x_{ji} = k^{\text{new}}$ for $k^{\text{new}} > K$ is
+\[
+	\Prob{x_{ji} = k^{\text{new}} \given x_{\neg ji}, w, b, \psi, a, m, x_{ji} > K} = \frac{\psi_v \times a m_{k^{\text{new}}}}{f_{ji\unrep}} = \frac{m_{k^{\text{new}}}}{m_{\unrep}}.
+\]
