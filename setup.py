@@ -22,7 +22,6 @@ setup(name = "gustav",
           'configobj>=5.0.6',
           'docopt>=0.6.2',
           'numpy>=1.11.2',
-          'scipy>=1.0',
           'mpi4py>=2.0.0',
           'sympy>=1.0'
       ]
