@@ -6,7 +6,7 @@ import numpy
 from itertools import cycle
 from collections import Counter, defaultdict
 
-from samplers import utils
+from .samplers import utils
 
 
 def sliceit(N, K):
