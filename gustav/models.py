@@ -9,7 +9,7 @@ import numpy
 from numpy.random import randint, dirichlet, rand
 from numpy import ones, zeros, unique, empty
 
-from samplers import fortranutils, fortransamplers
+from .samplers import fortranutils, fortransamplers
 
 def distributed_latent_sampler(model, index):
 
