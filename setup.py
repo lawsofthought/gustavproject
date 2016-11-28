@@ -16,7 +16,7 @@ setup(name = "gustav",
       packages=["gustav"],
       test_suite='setup.test_suite',
       scripts = [
-        'scripts/gustavx'
+        'scripts/gustave'
       ],
       install_requires=[
           'configobj>=5.0.6',
