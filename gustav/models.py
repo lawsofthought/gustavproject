@@ -1,5 +1,6 @@
 from __future__ import division
 
+import os
 import time
 import datetime
 
@@ -52,6 +53,15 @@ def showtopics(phi, vocabulary, show_probability=True, K=10):
     return ', '.join([sprintf[show_probability](k) 
                       for k in numpy.flipud(phi.argsort())[:K]])
 
+def make_model_id():
+
+    today = datetime.datetime.today()
+    model_id = '_'.join(['hdptm', 
+                          today.strftime('%d%m%y%H%M%S'),
+                          str(randint(1000, 10000))])
+
+    return model_id
+
 
 class HierarchicalDirichletProcessTopicModel(object):
 
@@ -90,12 +100,45 @@ class HierarchicalDirichletProcessTopicModel(object):
 
         #self.get_counts()
 
-    def __init__(self, data, K_min=3, K_max=1000, prior_gamma_scale=0.1, parallel=False):
+    @classmethod
+    def restart(cls, data, state, model_id, iteration):
 
-        today = datetime.datetime.today()
-        self.model_id = '_'.join(['model', 
-                                  today.strftime('%d%m%y%H%M%S'),
-                                  str(randint(1000, 10000))])
+        model = cls(data, 
+                    K_min=state['K_min'], 
+                    K_max=state['K_max'],
+                    model_id=model_id)
+
+        model.iteration = iteration
+
+        for key in ('a', 'b', 'gamma', 'psi', 'x', 'm', 'c', 'K_rep'):
+            setattr(model, key, state[key])
+
+
+        return model
+
+
+    @classmethod
+    def new(cls, data, K_min=5, K_max=1000):
+
+        model_id = make_model_id()
+
+        return cls(data, K_min=K_min, K_max=K_max, model_id=model_id)
+
+    @property
+    def date_initiated(self):
+
+        model_type, date_string, uid = self.model_id.split('_')
+
+        return datetime.datetime.strptime(date_string, '%d%m%y%H%M%S')
+
+    def __init__(self, data, K_min=3, K_max=1000, model_id=None):
+
+        if model_id is None:
+            model_id = make_model_id()
+
+        self.model_id = model_id
+
+        self.iteration = 0
 
         self.K_min = K_min
         self.K_max = K_max
@@ -127,11 +170,9 @@ class HierarchicalDirichletProcessTopicModel(object):
 
         self.c = 1.0
         self.prior_gamma_shape = 1.0
-        self.prior_gamma_scale = prior_gamma_scale # Or e.g. 0.05 to put a prior on low gamma
+        self.prior_gamma_scale = 0.1 # Or e.g. 0.05 to put a prior on low gamma
 
         self.initialize()
-
-        self.parallel = parallel
 
         self.verbose = True
         self.use_slow_latent_sampler = False
@@ -140,14 +181,6 @@ class HierarchicalDirichletProcessTopicModel(object):
         self.slow2 = False
 
         self.save_every_iteration = 10
-
-        if self.parallel:
-
-            from ipyparallel import Client
-
-            clients = Client()
-            clients.block = True
-            self.parallel_view = clients.load_balanced_view()
 
     def _initialize_gamma(self, J, p=0.9):
 
@@ -496,9 +529,9 @@ class HierarchicalDirichletProcessTopicModel(object):
             self._sample(iterations=thin, gamma=gamma)
             
 
-    def save_state(self):
+    def save_state(self, root='.'):
 
-        filename = self.model_id + 'state'
+        timestamp = datetime.datetime.now()
 
         state = dict(x = self.x,
                      w = self.w,
@@ -508,10 +541,17 @@ class HierarchicalDirichletProcessTopicModel(object):
                      c = self.c,
                      psi = self.psi,
                      m = self.m,
-                     gamma = self.gamma)
+                     gamma = self.gamma,
+                     K_rep = self.K_rep,
+                     K_min = self.K_min,
+                     K_max = self.K_max)
 
-        numpy.savez(filename, **state)
+        filename = self.model_id + '_state_' + str(self.iteration)
+        fullpath = os.path.join(root, filename)
 
+        numpy.savez(fullpath, **state)
+
+        return timestamp, filename + '.npz'
 
     def posterior_predictive(self, words, iterations=100, thin=10, seed=None):
 

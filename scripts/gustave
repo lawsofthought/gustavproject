@@ -2,11 +2,12 @@
 """Gustav: Probabilistic Topic Modelling Toolbox
 
 Usage:
-  gustavx model new <model_name> [--model-type=<model_type>] <data_name> 
-  gustavx model <model_name> update [--iterations=<N>] [--hyperparameters]
-  gustavx data new <data_name> [--data-type=<data_type>] <raw_data_file>
-  gustavx (-h | --help)
-  gustavx --version
+  gustave model new [--model-type=<model_type>] <corpus_name> 
+  gustave model <model_name> update [--iterations=<N>] [--hyperparameters]
+  gustave data new <corpus_name> [--data-type=<data_type>] <text_file> <vocab_file>
+  gustave init 
+  gustave (-h | --help)
+  gustave --version
 
 Options:
   -h --help                     Show this screen.
@@ -18,19 +19,163 @@ Options:
 """
 from docopt import docopt
 import configobj
+import os
+import errno
+import shutil
+import numpy
 
-try:
-    GUSTAV_DATA_ROOT = conf.GUSTAV_DATA_ROOT
-except:
+from gustav import utils, models
+
+CFG_FILENAME = 'gustav.cfg'
+GUSTAV_DATA_ROOT = 'data'
+GUSTAV_CORPORA_ROOT = os.path.join(GUSTAV_DATA_ROOT, 'corpora')
+GUSTAV_SAMPLES_ROOT = os.path.join(GUSTAV_DATA_ROOT, 'samples')
+INDENT_TYPE = ' '*4
+
+def mkdir_p(path):
+    '''
+    Make a directory, making parents if necessary.
+    Taken verbatim from
+    http://stackoverflow.com/a/600612
+    '''
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
+
+def make_new_model(model_name, model_type, corpus_name):
     pass
 
-def make_new_model(model_name, model_type, data_name):
-    pass
 
-def make_new_data(raw_data_file, data_name, data_type):
-    pass
+def create_config_file(filename, GUSTAV_DATA_ROOT):
 
+    '''
+    Create a config file
+    '''
+
+    if os.path.exists(filename) and os.path.isfile(filename):
+        print('File %s exists. Doing nothing.' % filename)
+    else:
+        C = configobj.ConfigObj(infile=filename, indent_type=INDENT_TYPE)
+        C['GUSTAV_DATA_ROOT'] = GUSTAV_DATA_ROOT
+        C['models'] = {}
+        C['corpora'] = {}
+        C.write()
+
+
+def initialize():
+
+    mkdir_p(GUSTAV_CORPORA_ROOT)
+    mkdir_p(GUSTAV_SAMPLES_ROOT)
+
+    create_config_file(CFG_FILENAME, GUSTAV_DATA_ROOT)
+
+
+def new_data_set(data_filename, vocabulary_filename):
+
+    return utils.BagOfWords(data_filename, vocabulary_filename)
+
+def move(filename, dst):
+
+    # mv src to dst if src does not already exist in dst
+    dst_filename = os.path.join(dst, filename)
+    if os.path.exists(dst_filename):
+        print('%s exists. Doing nothing')
+    else:
+        shutil.move(filename, dst)
+
+def get_corpus_name(arguments):
+    return os.path.join(GUSTAV_CORPORA_ROOT, arguments['<corpus_name>'] + '.pkl')
+
+def get_cfg():
+    return configobj.ConfigObj(CFG_FILENAME, indent_type=INDENT_TYPE)
 
 if __name__ == '__main__':
+
     arguments = docopt(__doc__, version='Gustav 0.0.0')
-    print(arguments)
+
+    if arguments['init']:
+
+        initialize()
+
+    elif arguments['model'] and arguments['new']:
+
+        if arguments['--model-type'] == 'hdptm':
+
+            data = utils.load(get_corpus_name(arguments))
+
+            model = models.HierarchicalDirichletProcessTopicModel.new(data)
+
+            saved_state_timestamp, saved_state_filename = model.save_state(root=GUSTAV_SAMPLES_ROOT)
+
+            C = get_cfg()
+            C['models'][model.model_id] = {}
+            
+            C['models'][model.model_id]['date-initiated'] = model.date_initiated.strftime('%B %d %Y, %H:%M:%S')
+            C['models'][model.model_id]['corpus'] = arguments['<corpus_name>']
+            C['models'][model.model_id]['samples'] = {}
+            C['models'][model.model_id]['samples']['sample-%d' % model.iteration] = {}
+            C['models'][model.model_id]['samples']['sample-%d' % model.iteration]['timestamp'] = saved_state_timestamp
+            C['models'][model.model_id]['samples']['sample-%d' % model.iteration]['iteration'] = model.iteration
+            C['models'][model.model_id]['samples']['sample-%d' % model.iteration]['filename'] = saved_state_filename
+            C.write()
+
+        else:
+
+            print('Sorry. So far only hdptm is implemented.')
+
+    elif arguments['model'] and arguments['update']:
+
+        model_id = arguments['<model_name>']
+
+        C = get_cfg()
+        info = C['models'][model_id]
+        corpus_name = info['corpus']
+        samples_info = info['samples']
+
+        _, sample_info = sorted(samples_info.items(), key=lambda arg: int(arg[1]['iteration'])).pop()
+
+        state = numpy.load(os.path.join(GUSTAV_SAMPLES_ROOT, sample_info['filename']))
+
+        iteration = int(sample_info['iteration'])
+
+        data = utils.load(os.path.join(GUSTAV_CORPORA_ROOT, corpus_name) + '.pkl')
+
+        model = models.HierarchicalDirichletProcessTopicModel.restart(data, state, model_id, iteration)
+
+        print(model)
+
+    elif arguments['data'] and arguments['new']:
+
+        corpus_name = arguments['<corpus_name>']
+
+        filename = corpus_name + '.pkl'
+
+        fullpathname = os.path.join(GUSTAV_CORPORA_ROOT, filename)
+
+        text_filename = arguments['<text_file>']
+
+        vocab_filename = arguments['<vocab_file>']
+
+        if os.path.exists(fullpathname) and os.path.isfile(fullpathname):
+            print('Data file %s exists. Doing nothing.' % filename)
+        else:
+         
+            data_set = new_data_set(text_filename, vocab_filename)
+
+            utils.dump(data_set, fullpathname)
+
+            move(text_filename, GUSTAV_CORPORA_ROOT)
+            move(vocab_filename, GUSTAV_CORPORA_ROOT)
+
+            C = get_cfg()
+
+            C['corpora'][corpus_name] = {}
+
+            C['corpora'][corpus_name]['object'] = os.path.basename(filename)
+            C['corpora'][corpus_name]['text-file'] = text_filename
+            C['corpora'][corpus_name]['vocab-file'] = vocab_filename
+
+            C.write()

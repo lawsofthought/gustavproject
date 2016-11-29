@@ -6,6 +6,8 @@ import numpy
 from itertools import cycle
 from collections import Counter, defaultdict
 
+import cPickle as pickle
+
 from .samplers import utils
 
 
@@ -33,11 +35,42 @@ class BagOfWords(object):
 
     '''
 
-    def __init__(self, data_filename, vocabulary_filename):
+    def make_lda_formatted_corpus(self, text_filename, word_sep='|'):
 
-        vocabulary = open(vocabulary_filename).read().strip().split('\n')
+        texts = open(text_filename).read().strip().split('\n')
 
-        documents = open(data_filename).read().strip().split('\n')
+        self.lda_formatted_corpus = []
+        for text in texts:
+
+            counts = defaultdict(int)
+            for word in text.strip().split(word_sep):
+                try:
+                    counts[self.word_to_index[word]] += 1
+                except KeyError:
+                    pass
+            
+            token_counts = sorted(counts.iteritems(), key=lambda items: items[0])
+
+            self.lda_formatted_corpus.append(token_counts)
+
+        self.J = len(self.lda_formatted_corpus)
+
+    def make_vocabulary(self, vocabulary_filename):
+
+        self.vocabulary = open(vocabulary_filename).read().strip().split('\n')
+        self.V = len(self.vocabulary)
+
+        self.index_to_word = dict()
+        self.word_to_index = dict()
+
+        for i, word in enumerate(self.vocabulary):
+            self.index_to_word[i] = word
+            self.word_to_index[word] = i
+
+    def __init__(self, data_filename, vocabulary_filename, word_sep='|'):
+
+        self.make_vocabulary(vocabulary_filename)
+        self.make_lda_formatted_corpus(data_filename, word_sep=word_sep)
 
         all_tokens = dict()
 
@@ -46,17 +79,13 @@ class BagOfWords(object):
 
         ii = 0
         start_doc_index = {}
-        Nj = {}
-        for doc_id, document in enumerate(documents):
+        self.Nj = {}
+        for doc_id, document in enumerate(self.lda_formatted_corpus):
 
             start_doc_index[doc_id] = ii
 
-
             nj = 0
-            for token_count_tuple in document.strip().split():
-
-                token, count = map(int, 
-                                   token_count_tuple.split(':'))
+            for token, count in document:
 
                 for _ in xrange(count):
 
@@ -68,32 +97,20 @@ class BagOfWords(object):
 
                 all_tokens[token] = None
 
-            Nj[doc_id] = nj
+            self.Nj[doc_id] = nj
 
-        assert len(vocabulary) == len(all_tokens) == (max(w) + 1)
+        assert len(self.vocabulary) == len(all_tokens) == (max(w) + 1)
 
         assert len(z) == len(w)
 
-        assert len(documents) == (max(z)+1) == (max(Nj.keys()) + 1) == (max(start_doc_index) + 1)
+        assert len(self.lda_formatted_corpus) == (max(z)+1) == (max(self.Nj.keys()) + 1) == (max(start_doc_index) + 1)
 
         self.w = numpy.array(w)
         self.z = numpy.array(z)
 
-        self.vocabulary = vocabulary
-
-        self.V = len(vocabulary)
-        self.J = len(documents)
         self.N = len(self.z)
 
-        self.index_to_word = dict()
-        self.word_to_index = dict()
-
-        for i, word in enumerate(self.vocabulary):
-            self.index_to_word[i] = word
-            self.word_to_index[word] = i
-
-
-        self.lims = array([(start_doc_index[j], Nj[j]) for j in
+        self.lims = array([(start_doc_index[j], self.Nj[j]) for j in
                            xrange(self.J)])
 
 
@@ -232,3 +249,16 @@ def write_testdata(K,
 
     with open(filename, 'w') as f:
         f.write('\n'.join([make_lda_dat_str(doc) for doc in data]))
+
+
+def dump(obj, filename):
+    
+    with open(filename, 'wb') as f:
+        pickle.dump(obj, f, protocol=2)
+
+def load(filename):
+
+    with open(filename, 'rb') as f:
+        obj = pickle.load(f)
+
+    return obj
