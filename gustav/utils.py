@@ -1,6 +1,6 @@
 from __future__ import division, absolute_import
 
-from numpy import zeros, ones, array, unique, arange, where
+from numpy import zeros, ones, array, unique, arange, savez
 from numpy.random import rand, permutation, shuffle
 import numpy
 from itertools import cycle
@@ -16,48 +16,23 @@ def sliceit(N, K):
 
 class BagOfWords(object):
 
-    '''
-    A bag of words data object.
+    @classmethod
+    def new(cls, Q):
 
-    Input
-    -----
+        N, J, w, z, Nj, lims, vocabulary = (int(Q['N']), 
+                                            int(Q['J']), 
+                                            Q['w'], 
+                                            Q['z'], 
+                                            Q['Nj'], 
+                                            Q['lims'], 
+                                            list(Q['vocabulary']))
 
-    data_filename: Filename of lda formatted data
-
-    E.g.
-
-    0:1 6144:1 3586:2 3:1 4:1 1541:1 8:1 10:1 3927:1 12:7 
-    257:1 262:1 1927:2 1032:1 13:1 14:1 
-    5829:1 4040:1 2891:1 14:1 1783:1 381:1 
-
-    vocabulary_filename: Newline delimited list of words in vocabulary.
+        return cls(z, w, N, Nj, J, vocabulary, lims)
 
 
-    '''
+    def make_vocabulary(self, vocabulary):
 
-    def make_lda_formatted_corpus(self, text_filename, word_sep='|'):
-
-        texts = open(text_filename).read().strip().split('\n')
-
-        self.lda_formatted_corpus = []
-        for text in texts:
-
-            counts = defaultdict(int)
-            for word in text.strip().split(word_sep):
-                try:
-                    counts[self.word_to_index[word]] += 1
-                except KeyError:
-                    pass
-            
-            token_counts = sorted(counts.iteritems(), key=lambda items: items[0])
-
-            self.lda_formatted_corpus.append(token_counts)
-
-        self.J = len(self.lda_formatted_corpus)
-
-    def make_vocabulary(self, vocabulary_filename):
-
-        self.vocabulary = open(vocabulary_filename).read().strip().split('\n')
+        self.vocabulary = vocabulary
         self.V = len(self.vocabulary)
 
         self.index_to_word = dict()
@@ -67,61 +42,23 @@ class BagOfWords(object):
             self.index_to_word[i] = word
             self.word_to_index[word] = i
 
-    def __init__(self, data_filename, vocabulary_filename, word_sep='|'):
+    def __init__(self, z, w, N, Nj, J, vocabulary, lims):
 
-        self.make_vocabulary(vocabulary_filename)
-        self.make_lda_formatted_corpus(data_filename, word_sep=word_sep)
+        self.make_vocabulary(vocabulary)
 
-        all_tokens = dict()
+        self.z = z
+        self.w = w
+        assert N == len(self.z)
+        self.N = N
+        assert sum(Nj) == N
+        assert len(Nj) == J
+        self.J = J
+        self.Nj = Nj
 
-        z = []
-        w = []
-
-        ii = 0
-        start_doc_index = {}
-        self.Nj = {}
-        for doc_id, document in enumerate(self.lda_formatted_corpus):
-
-            start_doc_index[doc_id] = ii
-
-            nj = 0
-            for token, count in document:
-
-                for _ in xrange(count):
-
-                    z.append(doc_id)
-                    w.append(token)
-
-                    ii += 1
-                    nj += 1
-
-                all_tokens[token] = None
-
-            self.Nj[doc_id] = nj
-
-        assert len(self.vocabulary) == len(all_tokens) == (max(w) + 1)
-
-        assert len(z) == len(w)
-
-        assert len(self.lda_formatted_corpus) == (max(z)+1) == (max(self.Nj.keys()) + 1) == (max(start_doc_index) + 1)
-
-        self.w = numpy.array(w)
-        self.z = numpy.array(z)
-
-        self.N = len(self.z)
-
-        self.lims = array([(start_doc_index[j], self.Nj[j]) for j in
-                           xrange(self.J)])
-
+        self.lims = lims
 
     def _doc_indices(self, j):
         return arange(self.lims[j][0], self.lims[j][0]+self.lims[j][1]) 
-
-    def _lim_test(self):
-
-        for i, lim in enumerate(self.lims):
-            truth = self._doc_indices(i) == where(self.z == i)[0]
-            assert all(truth)
 
     def distribute(self, K=8, test=False):
 
@@ -180,6 +117,107 @@ class BagOfWords(object):
 
         return I, tuple(starts), tuple(lengths)
 
+
+class BagOfWordsFactory(object):
+
+    @classmethod
+    def new(cls, text_filename, vocabulary_filename, save_filename, word_sep='|'):
+        
+        data = cls(text_filename, vocabulary_filename, word_sep)
+
+        data.save(save_filename)
+
+    def make_lda_formatted_corpus(self, text_filename, word_sep='|'):
+
+        texts = open(text_filename).read().strip().split('\n')
+
+        self.lda_formatted_corpus = []
+        for text in texts:
+
+            counts = defaultdict(int)
+            for word in text.strip().split(word_sep):
+                try:
+                    counts[self.word_to_index[word]] += 1
+                except KeyError:
+                    pass
+            
+            token_counts = sorted(counts.iteritems(), key=lambda items: items[0])
+
+            self.lda_formatted_corpus.append(token_counts)
+
+        self.J = len(self.lda_formatted_corpus)
+
+    def make_vocabulary(self, vocabulary_filename):
+
+        self.vocabulary = open(vocabulary_filename).read().strip().split('\n')
+        self.V = len(self.vocabulary)
+
+        self.index_to_word = dict()
+        self.word_to_index = dict()
+
+        for i, word in enumerate(self.vocabulary):
+            self.index_to_word[i] = word
+            self.word_to_index[word] = i
+
+    def save(self, filename):
+
+        Q = dict(w=self.w,
+                 z=self.z,
+                 N=self.N,
+                 Nj=self.Nj,
+                 J=self.J,
+                 vocabulary=self.vocabulary,
+                 lims=self.lims)
+
+        savez(filename, **Q)
+
+    def __init__(self, text_filename, vocabulary_filename, word_sep='|'):
+
+        self.make_vocabulary(vocabulary_filename)
+        self.make_lda_formatted_corpus(text_filename, word_sep=word_sep)
+
+        all_tokens = dict()
+
+        z = []
+        w = []
+
+        ii = 0
+        start_doc_index = {}
+        self.Nj = {}
+        for doc_id, document in enumerate(self.lda_formatted_corpus):
+
+            start_doc_index[doc_id] = ii
+
+            nj = 0
+            for token, count in document:
+
+                for _ in xrange(count):
+
+                    z.append(doc_id)
+                    w.append(token)
+
+                    ii += 1
+                    nj += 1
+
+                all_tokens[token] = None
+
+            self.Nj[doc_id] = nj
+
+        assert self.V == len(self.vocabulary) == len(all_tokens) == (max(w) + 1)
+
+        assert len(z) == len(w)
+
+        assert len(self.lda_formatted_corpus) == (max(z)+1) == (max(self.Nj.keys()) + 1) == (max(start_doc_index) + 1)
+
+        self.w = numpy.array(w)
+        self.z = numpy.array(z)
+
+        self.N = len(self.z)
+
+        self.lims = array([(start_doc_index[j], self.Nj[j]) for j in
+                           xrange(self.J)])
+
+        self.Nj = [self.Nj[j] for j in xrange(self.J)] # From dict to list
 
 
 def testset(K=10, J=250, N=100, m=None):

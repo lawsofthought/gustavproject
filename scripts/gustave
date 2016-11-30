@@ -17,13 +17,17 @@ Options:
   --data-type=<data_type>       Type of data set [default: bag_of_words].
 
 """
+
 from docopt import docopt
 import configobj
 import os
 import errno
 import shutil
+import sys
+import sh
 import numpy
 
+import gustav
 from gustav import utils, models
 
 CFG_FILENAME = 'gustav.cfg'
@@ -33,17 +37,20 @@ GUSTAV_SAMPLES_ROOT = os.path.join(GUSTAV_DATA_ROOT, 'samples')
 INDENT_TYPE = ' '*4
 
 def mkdir_p(path):
+
     '''
     Make a directory, making parents if necessary.
     Taken verbatim from
     http://stackoverflow.com/a/600612
     '''
+
     try:
         os.makedirs(path)
     except OSError as exc: # Python >2.5
         if exc.errno == errno.EEXIST and os.path.isdir(path):
             pass
         else: raise
+
 
 def make_new_model(model_name, model_type, corpus_name):
     pass
@@ -73,10 +80,6 @@ def initialize():
     create_config_file(CFG_FILENAME, GUSTAV_DATA_ROOT)
 
 
-def new_data_set(data_filename, vocabulary_filename):
-
-    return utils.BagOfWords(data_filename, vocabulary_filename)
-
 def move(filename, dst):
 
     # mv src to dst if src does not already exist in dst
@@ -86,15 +89,19 @@ def move(filename, dst):
     else:
         shutil.move(filename, dst)
 
+
 def get_corpus_name(arguments):
-    return os.path.join(GUSTAV_CORPORA_ROOT, arguments['<corpus_name>'] + '.pkl')
+    return os.path.join(GUSTAV_CORPORA_ROOT, arguments['<corpus_name>'] + '.npz')
+
 
 def get_cfg():
     return configobj.ConfigObj(CFG_FILENAME, indent_type=INDENT_TYPE)
 
+
 if __name__ == '__main__':
 
     arguments = docopt(__doc__, version='Gustav 0.0.0')
+    print(arguments)
 
     if arguments['init']:
 
@@ -104,7 +111,16 @@ if __name__ == '__main__':
 
         if arguments['--model-type'] == 'hdptm':
 
-            data = utils.load(get_corpus_name(arguments))
+            Q = numpy.load(get_corpus_name(arguments))
+            N, J, w, z, Nj, lims, vocabulary = (Q['N'], 
+                                                Q['J'], 
+                                                Q['w'], 
+                                                Q['z'], 
+                                                Q['Nj'], 
+                                                Q['lims'], 
+                                                list(Q['vocabulary']))
+
+            data = utils.BagOfWords(z,w,N,Nj,J,vocabulary,lims)
 
             model = models.HierarchicalDirichletProcessTopicModel.new(data)
 
@@ -137,35 +153,45 @@ if __name__ == '__main__':
 
         _, sample_info = sorted(samples_info.items(), key=lambda arg: int(arg[1]['iteration'])).pop()
 
-        state = numpy.load(os.path.join(GUSTAV_SAMPLES_ROOT, sample_info['filename']))
+        state_filename = os.path.join(GUSTAV_SAMPLES_ROOT, sample_info['filename'])
 
-        iteration = int(sample_info['iteration'])
+        initial_iteration = int(sample_info['iteration'])
 
-        data = utils.load(os.path.join(GUSTAV_CORPORA_ROOT, corpus_name) + '.pkl')
+        data_filename = os.path.join(GUSTAV_CORPORA_ROOT, corpus_name) + '.npz'
 
-        model = models.HierarchicalDirichletProcessTopicModel.restart(data, state, model_id, iteration)
+        executable = sys.executable
+        
+        mpirunner = os.path.join(gustav.__path__[0], 
+                                 'mpitools.py')
 
-        print(model)
+        args = [data_filename, 
+                state_filename, 
+                model_id, 
+                initial_iteration,
+                arguments['--iterations'],
+                arguments['--hyperparameters']]
+
+        print(sh.mpiexec(['-n', '3', executable, mpirunner] + args))
 
     elif arguments['data'] and arguments['new']:
 
         corpus_name = arguments['<corpus_name>']
+        saved_filename = corpus_name + '.npz'
 
-        filename = corpus_name + '.pkl'
-
-        fullpathname = os.path.join(GUSTAV_CORPORA_ROOT, filename)
+        saved_file_fullpathname = os.path.join(GUSTAV_CORPORA_ROOT,
+                                               saved_filename)
 
         text_filename = arguments['<text_file>']
 
         vocab_filename = arguments['<vocab_file>']
 
-        if os.path.exists(fullpathname) and os.path.isfile(fullpathname):
-            print('Data file %s exists. Doing nothing.' % filename)
+        if os.path.exists(saved_file_fullpathname) and os.path.isfile(saved_state_filename):
+            print('Data file %s exists. Doing nothing.' % saved_filename)
         else:
-         
-            data_set = new_data_set(text_filename, vocab_filename)
-
-            utils.dump(data_set, fullpathname)
+            utils.BagOfWordsFactory.new(text_filename, 
+                                        vocab_filename,
+                                        saved_file_fullpathname,
+                                        word_sep='|')
 
             move(text_filename, GUSTAV_CORPORA_ROOT)
             move(vocab_filename, GUSTAV_CORPORA_ROOT)
@@ -174,7 +200,7 @@ if __name__ == '__main__':
 
             C['corpora'][corpus_name] = {}
 
-            C['corpora'][corpus_name]['object'] = os.path.basename(filename)
+            C['corpora'][corpus_name]['object'] = os.path.basename(saved_filename)
             C['corpora'][corpus_name]['text-file'] = text_filename
             C['corpora'][corpus_name]['vocab-file'] = vocab_filename
 
