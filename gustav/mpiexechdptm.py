@@ -4,35 +4,37 @@ from mpi4py import MPI
 import numpy
 from gustav import models, utils
 
-COMM = MPI.COMM_WORLD
-SIZE = COMM.Get_size()
-RANK = COMM.Get_rank()
+if __name__ == '__main__':
 
-verbose = True
+    COMM = MPI.COMM_WORLD
+    SIZE = COMM.Get_size()
+    RANK = COMM.Get_rank()
 
-(data_filename, 
- state_filename, 
- model_id, 
- initial_iteration, 
- iterations,
- sample_hyperparameters) = sys.argv[1:]
+    verbose = True
 
-data = utils.load(data_filename)
-state = numpy.load(state_filename)
-model = models.HierarchicalDirichletProcessTopicModel.restart(data,
-                                                              state,
-                                                              model_id,
-                                                              initial_iteration)
-if RANK == 0:
-    x = numpy.empty(model.N, dtype=int)
-else:
-    x = None
+    (data_filename, 
+     state_filename, 
+     model_id, 
+     initial_iteration, 
+     iterations,
+     sample_hyperparameters) = sys.argv[1:]
 
-for iteration in xrange(iterations):
-
+    data = utils.load(data_filename)
+    state = numpy.load(state_filename)
+    model = models.HierarchicalDirichletProcessTopicModel.restart(data,
+                                                                  state,
+                                                                  model_id,
+                                                                  initial_iteration)
     if RANK == 0:
-        if verbose:
-            print(iteration)
+        x = numpy.empty(model.N, dtype=int)
+    else:
+        x = None
+
+    for iteration in xrange(iterations):
+
+        if RANK == 0:
+            if verbose:
+                print(iteration)
 
 #    ##########################################################################
 #

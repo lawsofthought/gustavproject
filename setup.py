@@ -17,8 +17,6 @@ setup(name = "gustav",
       test_suite='setup.test_suite',
       scripts = [
         'scripts/gustave',
-        'scripts/mpiexechdptm.py',
-        'scripts/xhello.py'
       ],
       install_requires=[
           'configobj>=5.0.6',
