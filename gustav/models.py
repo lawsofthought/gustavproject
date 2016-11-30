@@ -45,13 +45,26 @@ def distributed_latent_sampler(model, index):
     return latent
 
 
-def showtopics(phi, vocabulary, show_probability=True, K=10):
+def showtopic(phi, vocabulary, show_probability=True, K=10):
     
     sprintf = {True: lambda k: vocabulary[k] + ' (%2.2f)' % phi[k],
                False: lambda k: vocabulary[k]}
 
     return ', '.join([sprintf[show_probability](k) 
                       for k in numpy.flipud(phi.argsort())[:K]])
+
+
+def showtopics(model, K=10):
+
+    for i,k in enumerate(numpy.flipud(numpy.argsort(model.Sk))[:K]):
+
+        topic_string = showtopic(model.S[k], 
+                                 model.vocabulary,
+                                 show_probability=False)
+
+        print('Topic %d (%2.2f): %s' % (k, 
+                                        model.Sk[k]/float(model.Sk.sum()),
+                                        topic_string))
 
 def make_model_id():
 
@@ -174,7 +187,7 @@ class HierarchicalDirichletProcessTopicModel(object):
 
         self.initialize()
 
-        self.verbose = True
+        self.verbose = False
         self.use_slow_latent_sampler = False
         self.use_altalt = True
 
