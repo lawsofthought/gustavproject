@@ -16,7 +16,8 @@ setup(name = "gustav",
       packages=["gustav"],
       test_suite='setup.test_suite',
       scripts = [
-        'scripts/gustave'
+        'scripts/gustave',
+        'scripts/mpiexechdptm.py'
       ],
       install_requires=[
           'configobj>=5.0.6',
