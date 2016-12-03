@@ -1,4 +1,4 @@
-from __future__ import division
+from __future__ import division, print_function
 
 import os
 import time
@@ -54,17 +54,28 @@ def showtopic(phi, vocabulary, show_probability=True, K=10):
                       for k in numpy.flipud(phi.argsort())[:K]])
 
 
-def showtopics(model, K=10):
+def showtopics(model, K=10, filename=None):
 
-    for i,k in enumerate(numpy.flipud(numpy.argsort(model.Sk))[:K]):
+    output = []
+    for i,k in enumerate(numpy.flipud(numpy.argsort(model.Sk))):
 
         topic_string = showtopic(model.S[k], 
                                  model.vocabulary,
-                                 show_probability=False)
+                                 show_probability=False,
+                                 K=K)
 
-        print('Topic %d (%2.2f): %s' % (k, 
-                                        model.Sk[k]/float(model.Sk.sum()),
-                                        topic_string))
+        output.append('Topic %d (%2.2f): %s' % (k,
+                                                model.Sk[k]/float(model.Sk.sum()),
+                                                topic_string))
+
+    output = '\n'.join(output)
+
+    if filename is None:
+        print(output)
+    else:
+        with open(filename, 'w') as f:
+            print(output, file=f)
+
 
 def make_model_id():
 
@@ -179,7 +190,8 @@ class HierarchicalDirichletProcessTopicModel(object):
         self.psi = ones(self.V)/self.V
         self.a = 50.0
         self.gamma = self._initialize_gamma(self.K_rep, p=0.9)
-        self.m = rstick(self.gamma, self.K_max)
+        #self.m = rstick(self.gamma, self.K_max)
+        self.m = ones(self.K_max)/float(self.K_max)
 
         self.c = 1.0
         self.prior_gamma_shape = 1.0
@@ -208,7 +220,8 @@ class HierarchicalDirichletProcessTopicModel(object):
                 gamma += 1.0
 
             if gamma >= 1000.0:
-                raise Exception('Run away process of estimating gamma?')
+                return gamma
+                #raise Exception('Run away process of estimating gamma?')
 
     def _initialize_m(self, p=0.9):
 
@@ -540,7 +553,6 @@ class HierarchicalDirichletProcessTopicModel(object):
 
         for _ in xrange(samples):
             self._sample(iterations=thin, gamma=gamma)
-            
 
     def save_state(self, root='.'):
 

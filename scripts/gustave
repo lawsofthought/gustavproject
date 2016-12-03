@@ -2,8 +2,8 @@
 """Gustav: Probabilistic Topic Modelling Toolbox
 
 Usage:
-  gustave model new [--model-type=<model_type>] <corpus_name> 
-  gustave model <model_name> update [--iterations=<N>] [--hyperparameters]
+  gustave model new [--model-type=<model_type>] <corpus_name> [--K_min=<K_min>] [--K_max=<K_max>]
+  gustave model <model_name> update [--iterations=<N>] [--hyperparameters] [--parallel=<K>]
   gustave data new <corpus_name> [--data-type=<data_type>] <text_file> <vocab_file>
   gustave init 
   gustave (-h | --help)
@@ -12,9 +12,12 @@ Usage:
 Options:
   -h --help                     Show this screen.
   --version                     Show version.
+  --parallel=<K>                Number of processors [default: 1]
   --iterations=<N>              Model update iterations [default: 100]
   --model-type=<model_type>     Type of topic model [default: hdptm].
   --data-type=<data_type>       Type of data set [default: bag_of_words].
+  --K_min=<K_min>               Minimum number of topics [default: 10]
+  --K_max=<K_max>               Maximum number of topics [default: 100]
 
 """
 
@@ -111,6 +114,9 @@ if __name__ == '__main__':
 
         if arguments['--model-type'] == 'hdptm':
 
+            K_min = int(arguments['--K_min'])
+            K_max = int(arguments['--K_max'])
+
             Q = numpy.load(get_corpus_name(arguments))
             N, J, w, z, Nj, lims, vocabulary = (Q['N'], 
                                                 Q['J'], 
@@ -122,7 +128,9 @@ if __name__ == '__main__':
 
             data = utils.BagOfWords(z,w,N,Nj,J,vocabulary,lims)
 
-            model = models.HierarchicalDirichletProcessTopicModel.new(data)
+            model = models.HierarchicalDirichletProcessTopicModel.new(data,
+                                                                      K_min=K_min,
+                                                                      K_max=K_max)
 
             saved_state_timestamp, saved_state_filename = model.save_state(root=GUSTAV_SAMPLES_ROOT)
 
@@ -144,34 +152,45 @@ if __name__ == '__main__':
 
     elif arguments['model'] and arguments['update']:
 
-        model_id = arguments['<model_name>']
+        nprocessors = int(arguments['--parallel'])
 
-        C = get_cfg()
-        info = C['models'][model_id]
-        corpus_name = info['corpus']
-        samples_info = info['samples']
+        if nprocessors > 1:
 
-        _, sample_info = sorted(samples_info.items(), key=lambda arg: int(arg[1]['iteration'])).pop()
+            model_id = arguments['<model_name>']
 
-        state_filename = os.path.join(GUSTAV_SAMPLES_ROOT, sample_info['filename'])
+            C = get_cfg()
+            info = C['models'][model_id]
+            corpus_name = info['corpus']
+            samples_info = info['samples']
 
-        initial_iteration = int(sample_info['iteration'])
+            _, sample_info = sorted(samples_info.items(), 
+                                    key=lambda arg: int(arg[1]['iteration'])).pop()
 
-        data_filename = os.path.join(GUSTAV_CORPORA_ROOT, corpus_name) + '.npz'
+            state_filename = os.path.join(GUSTAV_SAMPLES_ROOT, sample_info['filename'])
 
-        executable = sys.executable
-        
-        mpirunner = os.path.join(gustav.__path__[0], 
-                                 'mpitools.py')
+            initial_iteration = int(sample_info['iteration'])
 
-        args = [data_filename, 
-                state_filename, 
-                model_id, 
-                initial_iteration,
-                arguments['--iterations'],
-                arguments['--hyperparameters']]
+            print(initial_iteration)
 
-        print(sh.mpiexec(['-n', '3', executable, mpirunner] + args))
+            data_filename = os.path.join(GUSTAV_CORPORA_ROOT, corpus_name) + '.npz'
+
+            executable = sys.executable
+            
+            mpirunner = os.path.join(gustav.__path__[0], 
+                                     'mpitools.py')
+
+            args = [data_filename, 
+                    state_filename, 
+                    model_id, 
+                    initial_iteration,
+                    arguments['--iterations'],
+                    arguments['--hyperparameters'],
+                    CFG_FILENAME,
+                    GUSTAV_SAMPLES_ROOT]
+
+            print(sh.mpiexec(['-n', nprocessors, executable, mpirunner] + args))
+        else:
+            print('Just implementing parallel version for now.')
 
     elif arguments['data'] and arguments['new']:
 
