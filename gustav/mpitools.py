@@ -29,7 +29,7 @@ if __name__ == '__main__':
     SIZE = COMM.Get_size()
     RANK = COMM.Get_rank()
 
-    thin = 2
+    thin = 10
     verbose = True
 
     (data_filename, 
