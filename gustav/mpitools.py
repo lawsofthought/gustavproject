@@ -111,7 +111,6 @@ if __name__ == '__main__':
         # Update hyperparameters #
         ##########################
         if sample_hyperparameters:
-            print('hyoer parans;')
 
             if RANK == 0:
 
