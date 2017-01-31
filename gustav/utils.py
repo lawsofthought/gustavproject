@@ -300,3 +300,4 @@ def load(filename):
         obj = pickle.load(f)
 
     return obj
+
