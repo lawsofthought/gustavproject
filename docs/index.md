@@ -1,9 +1,3 @@
----
-layout: page
-title: Gustav Probabilistic Topic Modelling Toolbox
-description: Overview of Gustav
----
-
 Gustav is a Probabilistic topic modelling toolbox. So far, only one topic
 model, namely a Hierarchical Dirichlet Process Mixture Model (HDPMM) is implemented. 
 
