@@ -1,0 +1,44 @@
+\documentclass{notes}
+\usepackage{amssymb,latexsym,amsmath,amsfonts,amscd}
+\usepackage{apacite}
+\usepackage{lettrine}
+\input{andrews_commands}
+\input{localcommands}
+\usepackage{lipsum}
+%\usepackage{showframe}
+\DeclareSymbolFont{legacymaths}{OT1}{cmr}{m}{n}
+\DeclareMathAccent{\dot}     {\mathalpha}{legacymaths}{95}
+\DeclareMathAccent{\bar}     {\mathalpha}{legacymaths}{22}
+\DeclareMathAccent{\tilde}     {\mathalpha}{legacymaths}{126}
+
+
+\AtBeginDocument{
+  \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
+  \DeclareSymbolFontAlphabet{\mathbb}{AMSb}}
+
+\def\mathnote#1{%
+  \tag*{\rlap{\hspace\marginparsep\smash{\parbox[t]{\marginparwidth}{%
+  \footnotesize#1}}}}
+}
+%
+
+\input{title}
+\input{author}
+
+\begin{document}
+\maketitle
+
+\input{introduction}
+\input{probabilistic_model}
+\input{gibbs_for_latent}
+\input{gibbs_for_a_m}
+\input{gibbs_for_b_psi}
+\input{gibbs_for_c}
+\input{gibbs_for_gamma}
+
+
+
+
+\bibliographystyle{apacite}
+\bibliography{mjandrews}
+\end{document}
