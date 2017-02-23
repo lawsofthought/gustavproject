@@ -8,11 +8,11 @@ utils.o: $(modules)
 	gfortran -g -fbounds-check -fbacktrace -finit-real=nan -fPIC -c utils.f95
 
 samplers: $(modules) $(objects)
-	f2py2 --f90flags="-fbacktrace -ffree-form" --fcompiler=gnu95 -c -m fortransamplers $(objects) samplers.f95
+	f2py --f90flags="-fbacktrace -ffree-form" --fcompiler=gnu95 -c -m fortransamplers $(objects) samplers.f95
 
 # Make a Python external module of utils for testing
 utils: $(modules) $(objects)
-	f2py2 --f90flags="-ffree-form" --fcompiler=gnu95 -c -m fortranutils random.o utils.f95
+	f2py --f90flags="-ffree-form" --fcompiler=gnu95 -c -m fortranutils random.o utils.f95
 	
 clean:
 	rm -f $(objects) $(modules)
