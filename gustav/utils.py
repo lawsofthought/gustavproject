@@ -14,6 +14,70 @@ from .samplers import utils
 def sliceit(N, K):
     return zip(list(numpy.arange(K) * (N//K)), list(numpy.arange(1, K) * (N//K)) + [N-1])
 
+class SparseCountMatrix(object):
+
+    @classmethod
+    def new(cls, text_filename, vocabulary_filename):
+
+        sparse_count_matrix = cls(text_filename, vocabulary_filename)
+    
+        return sparse_count_matrix.ijv
+
+    def __init__(self, text_filename, vocabulary_filename):
+        
+        self.make_vocabulary(vocabulary_filename)
+        self.get_ijv(text_filename)
+ 
+    def get_ijv(self, text_filename, word_sep='|'):
+
+        texts = open(text_filename).read().strip().split('\n')
+        
+        J = len(texts)
+        
+        counts = defaultdict(int)
+        text_counts = defaultdict(int)
+            
+        for j, text in enumerate(texts):
+
+            for word in text.strip().split(word_sep):
+                try:
+                    counts[(j, self.word_to_index[word])] += 1
+                    text_counts[j] += 1
+                except KeyError:
+                    # Ignore words not in vocabulary
+                    pass
+                
+        rows = []
+        cols = []
+        values = []
+        for j,v in counts:
+            rows.append(j)
+            cols.append(v)
+            values.append(counts[(j,v)])
+
+        skdot = []
+        for j in text_counts:
+            skdot.append(text_counts[j])
+            
+        data_tuple = tuple(map(numpy.array, 
+                               [rows, cols, values, skdot])) + (J, self.V, self.vocabulary)
+
+        self.ijv = dict(zip('rows cols values skdot J V vocabulary'.split(), 
+                            data_tuple))
+                
+    def make_vocabulary(self, vocabulary_filename):
+
+        self.vocabulary = open(vocabulary_filename).read().strip().split('\n')
+        self.V = len(self.vocabulary)
+
+        self.index_to_word = dict()
+        self.word_to_index = dict()
+
+        for i, word in enumerate(self.vocabulary):
+            self.index_to_word[i] = word
+            self.word_to_index[word] = i
+
+
 class BagOfWords(object):
 
     @classmethod

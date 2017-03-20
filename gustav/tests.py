@@ -27,6 +27,7 @@ from samplers.fortransamplers import (hdpmm_latents_gibbs_sampler,
                              hdpmm_latents_gibbs_sampler_alt,
                              hdpmm_latents_gibbs_sampler_par2,
                              sigma_sampler,
+                             sigma_sampler_sparse,
                              sigma_sampler2,
                              sigma_sampler_c,
                              sigma_sampler_c2,
@@ -36,6 +37,7 @@ from samplers.fortransamplers import (hdpmm_latents_gibbs_sampler,
                              polya_sampler_am,
                              polya_sampler_bpsi,
                              polya_sampler_bpsi2,
+                             polya_sampler_bpsi_sparse,
                              polya_sampler_c,
                              polya_sampler_c2,
                              ddirichlet_sampler,
@@ -56,8 +58,6 @@ from samplers.fortranutils import (get_stirling_numbers,
 
 ##########################################################################
 ##########################################################################
-
-
 
 verbose = False
 time_started = time()
@@ -157,6 +157,45 @@ def _polya_concentration_sampler(sigmarowsum, tau, seed):
 
     return get_rgamma(shape_parameter, scale_parameter, seed)
 
+def get_ijv(S):
+
+    """
+    For a dense matrix (that's sparse), return its ijv.
+    """
+    
+    cols = []
+    rows = []
+    values = []
+    
+    K, V = S.shape
+    
+    for v in xrange(V):
+        for k in xrange(K):
+            
+            if S[k,v] != 0:
+                rows.append(k)
+                cols.append(v)
+                values.append(S[k,v])
+                
+    assert len(rows) == len(cols) == len(values) == (S != 0).sum()
+    
+    return tuple(map(numpy.array,
+                     (rows, cols, values))) + (K, V)
+
+
+def get_skdot(S_rows, S_cols, S_values, K, V):
+
+    """
+    For an ijv sparse representation of a matrix, calculate its sum over rows. 
+    Return an array of length K, where K is number of cols in original dense
+    matrix.
+    """
+
+    Skdot = numpy.zeros(K, dtype=int)
+    for i, row in enumerate(S_rows):
+        Skdot[row] += S_values[i]
+
+    return Skdot
 
 class TestCase(unittest.TestCase):
 
@@ -476,6 +515,24 @@ class TestCase(unittest.TestCase):
                              self.b, 
                              self.K_max,
                              self.V)
+
+    def fortran_get_bpsi_sigma_sparse(self, S, rnd_seed):
+
+
+        S_rows, S_cols, S_values, K, V = get_ijv(S)
+
+        N = len(S_values)
+
+        return sigma_sampler_sparse(S_values.max(), 
+                                    S_rows, 
+                                    S_cols,
+                                    S_values,
+                                    rnd_seed, 
+                                    self.psi,
+                                    self.b,
+                                    N,
+                                    V)
+
 
     def fortran_get_bpsi_sigma2(self, S, rnd_seed):
 
@@ -861,14 +918,16 @@ class TestCase(unittest.TestCase):
         sigma_s = self.python_get_bpsi_sigma(S, seed)
         f_sigma_s_sum = self.fortran_get_bpsi_sigma(S, seed)
         f_sigma_s_sum2 = self.fortran_get_bpsi_sigma2(S, seed)
+        f_sigma_s_sum3 = self.fortran_get_bpsi_sigma_sparse(S, seed)
+
         self.assertTrue(allclose(sigma_s.sum(axis=0), 
                                  f_sigma_s_sum))
         self.assertTrue(allclose(sigma_s.sum(axis=0), 
                                  f_sigma_s_sum2))
         self.assertTrue(allclose(f_sigma_s_sum,
                                  f_sigma_s_sum2))
-
-
+        self.assertTrue(allclose(sigma_s.sum(axis=0), 
+                                 f_sigma_s_sum3))
 
         seed = randint(101, 100001)
         sigma_r = self.python_get_am_sigma(R, seed)
@@ -1152,6 +1211,8 @@ class TestCase(unittest.TestCase):
         An integration test of the auxilliary variable based sampler of a and
         m.
         Here, we test the polya_sampler_am subroutine
+        
+        # TODO (Tue 21 Mar 2017 07:35:49 GMT):  testing bpsi not am, right?
 
         '''
 
@@ -1185,13 +1246,29 @@ class TestCase(unittest.TestCase):
                                           self.c,
                                           seed)
 
+    
+        S_rows, S_cols, S_values, K, V = get_ijv(S)
+        S_k_dot = get_skdot(S_rows, S_cols, S_values, K, V)
+
+        f_out4 = polya_sampler_bpsi_sparse(S_rows,
+                                           S_cols,
+                                           S_values,
+                                           S_k_dot,
+                                           self.psi,
+                                           self.b,
+                                           self.c,
+                                           seed,
+                                           len(S_rows),
+                                           K,
+                                           V)
+
         py_out = self._polya_sampler_bpsi(S, seed)
 
         for k in xrange(len(f_out)):
             self.assertTrue(allclose(f_out[k], py_out[k]))
             self.assertTrue(allclose(f_out2[k], py_out[k]))
             self.assertTrue(allclose(f_out3[k], py_out[k]))
-
+            self.assertTrue(allclose(f_out4[k], py_out[k]))
 
     def test_samplers(self):
 

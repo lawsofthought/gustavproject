@@ -4,8 +4,10 @@ import os
 import time
 import datetime
 
+from itertools import cycle
+
 from utils import BagOfWords
-from samplers.utils import sample, rstick
+from samplers.utils import sample
 import numpy
 from numpy.random import randint, dirichlet, rand
 from numpy import ones, zeros, unique, empty
@@ -85,6 +87,161 @@ def make_model_id():
                           str(randint(1000, 10000))])
 
     return model_id
+
+class MultinomialDirichletCompoundModel(object):
+
+    def __init__(self):
+        pass
+
+    def load_data(self, filename):
+
+        data = numpy.load(filename)
+        for key in ('rows', 'cols', 'values', 'skdot', 'J', 'V', 'vocabulary'):
+            setattr(self, key, data[key])
+
+        self.J = int(self.J)
+        self.V = int(self.V)
+        self.N = len(self.rows)
+
+        assert self.N == len(self.cols) == len(self.values)
+        assert self.J == len(self.skdot)
+
+        self.vocabulary = list(self.vocabulary)
+
+        # I'm repeating this a lot
+        self.index_to_word = dict()
+        self.word_to_index = dict()
+
+        for i, word in enumerate(self.vocabulary):
+            self.index_to_word[i] = word
+            self.word_to_index[word] = i
+
+    def load_state(self, filename):
+
+        state = numpy.load(filename)
+        for key in ('b', 'psi', 'c'):
+            setattr(self, key, state[key])
+
+    def save_state(self):
+
+        filename = self.model_id + '_' + str(self.iteration)
+
+        state = dict(psi = self.psi,
+                     b = self.b,
+                     c = self.c)
+
+        numpy.savez(filename, **state)
+
+    def initialize(self, seed=None):
+
+        '''Initialize or re-initialize the state'''
+
+        self._make_model_id()
+
+        self.psi = ones(self.V)/self.V
+        self.b = 0.1 * self.V
+        self.c = 0.1 * self.V
+
+        self.iteration = 0
+
+        if seed is None:
+            self.seed = randint(101, 1000001)
+        else:
+            self.seed = seed
+
+        # A seeded random number generator module
+        self.random = numpy.random.RandomState(seed=self.seed)
+
+        # When making new seeds
+        self.reseed_min_int, self.reseed_max_int = 100, 100000
+
+    def _make_model_id(self):
+
+        today = datetime.datetime.today()
+        model_id = '_'.join(['mdc', 
+                              today.strftime('%d%m%y%H%M%S'),
+                              str(randint(1000, 10000))])
+
+        self.model_id = model_id
+   
+    def _sample_bpsi(self):
+
+        this_seed = self.random.randint(self.reseed_min_int,
+                                        self.reseed_max_int)
+
+        self.sigma_s_colsums, self.b, self.psi\
+            = fortransamplers.polya_sampler_bpsi_sparse(self.rows,
+                                                        self.cols,
+                                                        self.values,
+                                                        self.skdot,
+                                                        self.psi, 
+                                                        self.b,
+                                                        self.c, 
+                                                        this_seed,
+                                                        self.N, 
+                                                        self.J,
+                                                        self.V)
+                                                  
+    def _sample_c(self):
+
+        this_seed = self.random.randint(self.reseed_min_int,
+                                        self.reseed_max_int)
+
+        I = unique(self.sigma_s_colsums)
+
+        self.c = fortransamplers.polya_sampler_c2(self.sigma_s_colsums,  
+                                                  I,
+                                                  max(I),
+                                                  self.c,
+                                                  this_seed,
+                                                  len(I),
+                                                  self.V)   
+
+    def update(self, iterations=1, sample_c=True, verbose=False):
+
+        for _ in xrange(iterations):
+
+            self._sample_bpsi()
+
+            if sample_c:
+                self._sample_c()
+
+            self.iteration += 1
+
+            if verbose:
+                print('Iteration: %d. b = %2.2f, c = %2.2f' % (self.iteration, self.b, self.c))
+
+    def sample(self, number_of_samples=1000, thin=10):
+
+        """
+        Draw `number_of_samples` samples every `thin` steps.
+        This will take `number_of_samples` x `thin` iterations.
+
+        """
+
+        psi = []
+        b = []
+        c = []
+
+        for iteration in cycle(xrange(thin)):
+
+            self._sample_bpsi()
+            self._sample_c()
+
+            self.iteration += 1
+
+            if iteration == 0:
+                psi.append(self.psi)
+                b.append(self.b)
+                c.append(self.c)
+
+            if len(psi) >= number_of_samples:
+                break
+
+
+        return dict(psi=psi,
+                    b = b,
+                    c = c)
 
 
 class HierarchicalDirichletProcessTopicModel(object):

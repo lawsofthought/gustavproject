@@ -578,6 +578,75 @@ subroutine polya_sampler_am(omega, a_out, m_out, R, m, a, J, K, vargamma, seed)
 
 end subroutine polya_sampler_am
 
+subroutine polya_sampler_bpsi_sparse(sigma_s_colsums, &
+		b_out, &
+		psi_out, & 
+		S_rows, & 
+		S_cols, & 
+		S_values, & 
+		S_k_dot, & 
+		psi, & 
+		b, & 
+		c, & 
+		N, & 
+		K, & 
+		V, &
+		seed)
+
+    ! A Gibbs sampler for a Dirichlet Multinomial Compound Model
+    ! ==========================================================
+
+    use random
+
+    implicit none
+
+    ! =============
+    integer(kind=8), intent(in) :: N
+    integer(kind=8), intent(in) :: K
+    integer(kind=8), intent(in) :: V
+    integer(kind=8), dimension(0:N-1), intent(in) :: S_rows
+    integer(kind=8), dimension(0:N-1), intent(in) :: S_cols
+    integer(kind=8), dimension(0:N-1), intent(in) :: S_values
+    integer(kind=8), dimension(0:K-1), intent(in) :: S_k_dot
+
+    integer, intent(in) :: seed
+
+    real(kind=8), intent(in) :: c
+
+    real(kind=8), dimension(0:V-1), intent(in) :: psi
+    real(kind=8), dimension(0:V-1), intent(out) :: psi_out
+    real(kind=8), intent(in) :: b
+    real(kind=8), intent(out) :: b_out
+
+    ! =============
+
+    integer(kind=8), dimension(4) :: rnd_seeds_long
+    integer, dimension(4) :: rnd_seeds
+    integer(kind=8), dimension(0:V-1), intent(out) :: sigma_s_colsums
+    real(kind=8), dimension(0:K-1) :: tau
+
+    ! =========================================================
+
+    call rinteger(rnd_seeds_long, int(4, kind=8), int(101, kind=8), int(10001, kind=8), seed)
+    rnd_seeds = int(rnd_seeds_long, kind=4)
+
+    call sigma_sampler_sparse(sigma_s_colsums,&
+                              maxval(S_values),& 
+                              S_rows,& 
+                              S_cols,& 
+                              S_values,& 
+                              rnd_seeds(1),&
+		              N,&
+		              V,&
+                              psi,&
+                              b)
+
+    call ddirichlet_sampler(psi_out, sigma_s_colsums, c/real(V, kind=8), rnd_seeds(2), V)
+    call tau_sampler(tau, S_k_dot, b, rnd_seeds(3), K)
+    call polya_concentration_sampler(b_out, sum(sigma_s_colsums), tau, K, rnd_seeds(4))
+
+end subroutine polya_sampler_bpsi_sparse
+
 subroutine polya_sampler_bpsi(sigma_s_colsums, b_out, psi_out, S, psi, b, K, V, c, seed)
 
     use random
@@ -589,7 +658,7 @@ subroutine polya_sampler_bpsi(sigma_s_colsums, b_out, psi_out, S, psi, b, K, V, 
     integer(kind=8), intent(in) :: V
     integer(kind=8), dimension(0:K-1, 0:V-1), intent(in) :: S
     integer, intent(in) :: seed
-    real(kind=8) :: c
+    real(kind=8), intent(in) :: c
 
     ! =============the
 
@@ -672,7 +741,6 @@ subroutine sigma_sampler(sigma_col_sum, stirling_dim, S, rnd_seed, k, v, psi, b)
                                           psi(v_index), &
                                           b)
 
-
 		else
 			sigma_sample = 0
 
@@ -684,6 +752,68 @@ subroutine sigma_sampler(sigma_col_sum, stirling_dim, S, rnd_seed, k, v, psi, b)
     end do
 
 end subroutine sigma_sampler
+
+subroutine sigma_sampler_sparse(sigma_col_sums, stirling_dim, S_rows, S_cols, S_values, rnd_seed, N, V, psi, b)
+
+    use random
+    
+    implicit none
+
+    ! Input arguments
+    integer(kind=8), intent(in) :: stirling_dim
+    integer(kind=8), intent(in) :: V
+
+    integer(kind=8), intent(in) :: N
+
+    integer(kind=8), dimension(0:N-1), intent(in) :: S_rows
+    integer(kind=8), dimension(0:N-1), intent(in) :: S_cols
+    integer(kind=8), dimension(0:N-1), intent(in) :: S_values
+
+    integer, intent(in) :: rnd_seed
+    real(kind=8) :: rnd_val
+    real(kind=8), dimension(0:V-1), intent(in) :: psi
+    real(kind=8), intent(in) :: b
+
+    ! Internal variables
+    real(kind = 8), dimension(0:stirling_dim, 0:stirling_dim) :: stirling_matrix
+    integer(kind=8) :: sigma_sample
+    integer(kind=8) :: S_k_v
+    integer(kind=8) :: v_index, k_index
+    integer(kind=8) :: i
+
+    ! Output variables
+    integer(kind=8), dimension(0:V-1), intent(out) :: sigma_col_sums
+
+    ! ###########################################################################
+
+    call get_normalized_stirling_numbers(stirling_matrix, stirling_dim)
+
+    call init_genrand(rnd_seed)
+
+    sigma_col_sums = 0
+
+    do i = 0, N-1
+
+    	k_index = S_rows(i)
+	v_index = S_cols(i)
+	S_k_v = S_values(i)
+
+        rnd_val = rand()
+
+        call get_sigma_sample(sigma_sample, &
+			      stirling_matrix, &
+			      stirling_dim, &
+			      S_k_v, &
+			      rnd_val, &
+			      psi(v_index), &
+			      b)
+
+        sigma_col_sums(v_index) = sigma_col_sums(v_index) + sigma_sample
+
+    end do
+
+end subroutine sigma_sampler_sparse
+
 
 subroutine polya_sampler_bpsi2(sigma_s_colsums, b_out, psi_out, S, indx, indx_length, stirling_matrix_dim, psi, b, K, V, c, seed)
 
