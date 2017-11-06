@@ -1,6 +1,6 @@
 from __future__ import division, absolute_import
 
-from numpy import zeros, ones, array, unique, arange, savez
+from numpy import zeros, ones, array, unique, arange, savez_compressed
 from numpy.random import rand, permutation, shuffle
 import numpy
 from itertools import cycle
@@ -233,7 +233,7 @@ class BagOfWordsFactory(object):
                  vocabulary=self.vocabulary,
                  lims=self.lims)
 
-        savez(filename, **Q)
+        savez_compressed(filename, **Q)
 
     def __init__(self, text_filename, vocabulary_filename, word_sep='|'):
 

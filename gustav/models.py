@@ -731,7 +731,7 @@ class HierarchicalDirichletProcessTopicModel(object):
         filename = self.model_id + '_state_' + str(self.iteration)
         fullpath = os.path.join(root, filename)
 
-        numpy.savez(fullpath, **state)
+        numpy.savez_compressed(fullpath, **state)
 
         return timestamp, filename + '.npz'
 
