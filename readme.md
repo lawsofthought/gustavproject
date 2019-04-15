@@ -1,6 +1,8 @@
 Gustav: A probabilistic topic modelling toolbox
 ===============================================
 
+[![DOI](https://zenodo.org/badge/80482187.svg)](https://zenodo.org/badge/latestdoi/80482187)
+
 Author
 
 :   Mark Andrews
